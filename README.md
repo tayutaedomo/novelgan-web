@@ -17,6 +17,6 @@ $ source venv/bin/activate
 $ python app.py
 $ open 'http://127.0.0.1:5000/'
 ```
-Open "http://127.0.0.1:5000/" with Web Browser.
+Open "http://127.0.0.1:5000/" with Web Browser.  
 Basic Auth: novelgan/novels
 
