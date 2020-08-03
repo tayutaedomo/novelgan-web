@@ -10,6 +10,15 @@ $ pip install --upgrade pip
 $ pip install -r requirements.txt
 ```
 
+
+## git lfs
+You have to execute the following commands as use git lfs.
+```
+$ git lfs install
+# git lfs track "*.h5"
+```
+
+
 ## Local Server
 ```
 $ cd novelgan-web
@@ -17,6 +26,17 @@ $ source venv/bin/activate
 $ python app.py
 $ open 'http://127.0.0.1:5000/'
 ```
-Open "http://127.0.0.1:5000/" with Web Browser.
+Open "http://127.0.0.1:5000/" with Web Browser.  
 Basic Auth: novelgan/novels
+
+
+## Config ENV
+You should set the appropriate ENV.
+```
+$ export APP_SETTINGS="config.DevelopmentConfig"
+# or
+$ export APP_SETTINGS=config.StagingConfig
+# or
+$ export APP_SETTINGS=config.ProductionConfig
+```
 
