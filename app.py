@@ -13,7 +13,7 @@ app.config.from_object(APP_SETTINGS)
 auth = HTTPBasicAuth()
 
 
-from lib.cyclegan import CycleGAN, IMG_COLS, IMG_ROWS
+from applib.cyclegan import CycleGAN, IMG_COLS, IMG_ROWS
 
 
 gan = None
