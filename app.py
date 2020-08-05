@@ -16,13 +16,19 @@ auth = HTTPBasicAuth()
 
 ROOT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT_PATH)
+print('sys.path', sys.path)
 
 from lib.cyclegan import CycleGAN, IMG_COLS, IMG_ROWS
 
 
-gan = CycleGAN()
-gan.init()
-gan.load_models()
+gan = None
+
+try:
+    gan = CycleGAN()
+    gan.init()
+    gan.load_models()
+except Exception as e:
+    print(e)
 
 
 @auth.verify_password
