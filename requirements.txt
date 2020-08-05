@@ -3,4 +3,5 @@ Flask-HTTPAuth==4.0.0
 tensorflow==2.2.0
 tensorflow-addons==0.10.0
 Pillow==7.1.2
+gunicorn==20.0.4
 
