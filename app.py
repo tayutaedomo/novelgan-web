@@ -1,5 +1,4 @@
 import os
-import sys
 import base64
 from io import BytesIO
 from PIL import Image
@@ -13,10 +12,6 @@ app.config.from_object(APP_SETTINGS)
 
 auth = HTTPBasicAuth()
 
-
-ROOT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(ROOT_PATH)
-print('sys.path', sys.path)
 
 from lib.cyclegan import CycleGAN, IMG_COLS, IMG_ROWS
 
