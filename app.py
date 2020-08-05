@@ -66,6 +66,16 @@ def cyclegan():
     return render_template('cyclegan.html', local=local)
 
 
+#@app.errorhandler(403)
+#@app.errorhandler(404)
+@app.errorhandler(500)
+@app.errorhandler(503)
+def error_handler(error):
+    print(error)
+    msg = 'Error: {code}\n'.format(code=error.code)
+    return msg, error.code
+
+
 if __name__ == '__main__':
     print('Config:', APP_SETTINGS)
     app.run()
