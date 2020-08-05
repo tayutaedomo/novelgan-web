@@ -16,16 +16,6 @@ auth = HTTPBasicAuth()
 from applib.cyclegan import CycleGAN, IMG_COLS, IMG_ROWS
 
 
-gan = None
-
-try:
-    gan = CycleGAN()
-    gan.init()
-    gan.load_models()
-except Exception as e:
-    print(e)
-
-
 @auth.verify_password
 def verify_password(username, password):
     u = os.getenv('BASICAUTH_USERNAME', 'novelgan')
@@ -40,6 +30,9 @@ def index():
     return redirect(url_for('cyclegan'))
 
 
+gan = None
+
+
 @app.route('/cyclegan', methods=['GET', 'POST'])
 def cyclegan():
     local = {
@@ -47,6 +40,16 @@ def cyclegan():
     }
 
     if request.files.get('image'):
+        global gan
+
+        if not gan:
+            try:
+                gan = CycleGAN()
+                gan.init()
+                gan.load_models()
+            except Exception as e:
+                print(e)
+
         file = request.files['image']
         local['file'] = file
 
