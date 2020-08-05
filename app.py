@@ -12,11 +12,8 @@ app.config.from_object(APP_SETTINGS)
 
 auth = HTTPBasicAuth()
 
-from lib.cyclegan import CycleGAN, IMG_COLS, IMG_ROWS
 
-gan = CycleGAN()
-gan.init()
-gan.load_models()
+from applib.cyclegan import CycleGAN, IMG_COLS, IMG_ROWS
 
 
 @auth.verify_password
@@ -33,6 +30,9 @@ def index():
     return redirect(url_for('cyclegan'))
 
 
+gan = None
+
+
 @app.route('/cyclegan', methods=['GET', 'POST'])
 def cyclegan():
     local = {
@@ -40,6 +40,16 @@ def cyclegan():
     }
 
     if request.files.get('image'):
+        global gan
+
+        if not gan:
+            try:
+                gan = CycleGAN()
+                gan.init()
+                gan.load_models()
+            except Exception as e:
+                print(e)
+
         file = request.files['image']
         local['file'] = file
 
@@ -64,6 +74,16 @@ def cyclegan():
         local['y_proba'] = y_img_str
 
     return render_template('cyclegan.html', local=local)
+
+
+#@app.errorhandler(403)
+#@app.errorhandler(404)
+@app.errorhandler(500)
+@app.errorhandler(503)
+def error_handler(error):
+    print(error)
+    msg = 'Error: {code}\n'.format(code=error.code)
+    return msg, error.code
 
 
 if __name__ == '__main__':
