@@ -48,3 +48,11 @@ $ export APP_SETTINGS=config.StagingConfig
 $ export APP_SETTINGS=config.ProductionConfig
 ```
 
+
+## Cloud Run
+```
+$ cd novelgan-web
+$ gcloud builds submit --tag gcr.io/[PROJECT-ID]/novelgan-web
+$ gcloud run deploy --image gcr.io/[PROJECT-ID]/novelgan-web --platform managed
+```
+
