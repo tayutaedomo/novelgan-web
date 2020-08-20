@@ -35,6 +35,7 @@ class CycleGAN:
         self.model_save_dir = os.path.join(OUTPUT_DIR_PATH, 'saved_models')
         self.combined_name = 'combined_model'
         self.g_AB_name = 'g_AB_model'
+        self.g_BA_name = 'g_BA_model'
 
         self.train_cnt = 0
 
@@ -296,8 +297,11 @@ class CycleGAN:
     #
     #     print(datetime.datetime.now().isoformat(), 'End')
 
-    def generate_image(self, img):
+    def generate_image_A(self, img):
         return self.g_AB.predict(img)
+
+    def generate_image_B(self, img):
+        return self.g_BA.predict(img)
 
     # def sample_images(self, epoch, batch_i):
     #     dir_path = os.path.join(self.img_save_dir, self.dataset_name)
@@ -353,6 +357,7 @@ class CycleGAN:
     # def save_models(self, file_suffix=None):
     #     self.save_model_weights(self.combined, self.combined_name, file_suffix)
     #     self.save_model_weights(self.g_AB, self.g_AB_name, file_suffix)
+    #     self.save_model_weights(self.g_BB, self.g_BB_name, file_suffix)
     #
     # def save_model_weights(self, saved_models, model_name, file_suffix=None):
     #     file_path = os.path.join(self.model_save_dir, self._create_h5_file_name(model_name, file_suffix))
@@ -363,6 +368,7 @@ class CycleGAN:
     def load_models(self, file_suffix=None):
         self.load_model_weights(self.combined_name, file_suffix)
         self.load_model_weights(self.g_AB_name, file_suffix)
+        self.load_model_weights(self.g_BA_name, file_suffix)
 
     def load_model_weights(self, model_name, file_suffix=None):
         model = None
@@ -371,6 +377,8 @@ class CycleGAN:
             model = self.combined
         elif model_name == self.g_AB_name:
             model = self.g_AB
+        elif model_name == self.g_BA_name:
+            model = self.g_BA
         else:
             print('Unsupported.', model_name)
             return
