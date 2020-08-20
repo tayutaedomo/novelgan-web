@@ -62,16 +62,24 @@ def cyclegan():
         img_reshape = img_np.reshape(1, IMG_ROWS, IMG_COLS, 3)
 
         x = img_reshape
-        y = gan.generate_image_B(x)
-        y = (0.5 * y + 0.5) * 255
-        y_img = Image.fromarray(np.uint8(y[0]))
 
-        buffered = BytesIO()
-        y_img.save(buffered, format='JPEG')
-        y_img_str = str(base64.b64encode(buffered.getvalue()), 'utf-8')
+        y_ba = gan.generate_image_B(x)
+        y_ba = (0.5 * y_ba + 0.5) * 255
+        y_ba_img = Image.fromarray(np.uint8(y_ba[0]))
+
+        y_ab = gan.generate_image_A(x)
+        y_ab = (0.5 * y_ab + 0.5) * 255
+        y_ab_img = Image.fromarray(np.uint8(y_ab[0]))
+
+        def to_datauri(y_img):
+            buffered = BytesIO()
+            y_img.save(buffered, format='JPEG')
+            y_img_str = str(base64.b64encode(buffered.getvalue()), 'utf-8')
+            return y_img_str
 
         local['predicted'] = True
-        local['y_proba'] = y_img_str
+        local['y_ba_proba'] = to_datauri(y_ba_img)
+        local['y_ab_proba'] = to_datauri(y_ab_img)
 
     return render_template('cyclegan.html', local=local)
 
