@@ -62,7 +62,7 @@ def cyclegan():
         img_reshape = img_np.reshape(1, IMG_ROWS, IMG_COLS, 3)
 
         x = img_reshape
-        y = gan.generate_image(x)
+        y = gan.generate_image_B(x)
         y = (0.5 * y + 0.5) * 255
         y_img = Image.fromarray(np.uint8(y[0]))
 
