@@ -1,9 +1,10 @@
 from tensorflow_addons.layers import InstanceNormalization
-from tensorflow.keras.layers import Input, Dropout, Concatenate
-from tensorflow.keras.layers import LeakyReLU
-from tensorflow.keras.layers import UpSampling2D, Conv2D
+from tensorflow.keras.layers import Input, Concatenate
+from tensorflow.keras.layers import LeakyReLU, Activation
+from tensorflow.keras.layers import Conv2D, Conv2DTranspose
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.initializers import RandomNormal
 
 # import matplotlib.pyplot as plt
 # import numpy as np
@@ -105,7 +106,7 @@ class CycleGAN:
         img_A_id = self.g_BA(img_A)
         img_B_id = self.g_AB(img_B)
 
-        # For the combined saved_models we will only train the generators
+        # For the combined model we will only train the generators
         self.d_A.trainable = False
         self.d_B.trainable = False
 
@@ -113,7 +114,7 @@ class CycleGAN:
         valid_A = self.d_A(fake_A)
         valid_B = self.d_B(fake_B)
 
-        # Combined saved_models trains generators to fool discriminators
+        # Combined model trains generators to fool discriminators
         self.combined = Model(inputs=[img_A, img_B],
                               outputs=[valid_A, valid_B,
                                        reconstr_A, reconstr_B,
@@ -126,84 +127,94 @@ class CycleGAN:
                                             self.lambda_id, self.lambda_id ],
                               optimizer=optimizer)
 
-    def build_generator(self):
-        """U-Net Generator"""
+    def build_generator(self, n_resnet=9):
+        """ResNet Generator"""
+        def resnet_block(n_filters, input_layer):
+            # weight initialization
+            init = RandomNormal(stddev=0.02)
 
-        def conv2d(layer_input, filters, f_size=4):
-            """Layers used during downsampling"""
-            d = Conv2D(filters, kernel_size=f_size, strides=2, padding='same')(layer_input)
-            d = LeakyReLU(alpha=0.2)(d)
-            d = InstanceNormalization()(d)
-            return d
+            # first layer convolutional layer
+            g = Conv2D(n_filters, (3,3), padding='same', kernel_initializer=init)(input_layer)
+            g = InstanceNormalization(axis=-1)(g)
+            g = Activation('relu')(g)
 
-        def deconv2d(layer_input, skip_input, filters, f_size=4, dropout_rate=0):
-            """Layers used during upsampling"""
-            u = UpSampling2D(size=2)(layer_input)
-            u = Conv2D(filters, kernel_size=f_size, strides=1, padding='same', activation='relu')(u)
-            if dropout_rate:
-                u = Dropout(dropout_rate)(u)
-            u = InstanceNormalization()(u)
-            u = Concatenate()([u, skip_input])
-            return u
+            # second convolutional layer
+            g = Conv2D(n_filters, (3,3), padding='same', kernel_initializer=init)(g)
+            g = InstanceNormalization(axis=-1)(g)
 
-        # Image input
-        d0 = Input(shape=self.img_shape)
+            # concatenate merge channel-wise with input layer
+            g = Concatenate()([g, input_layer])
 
-        # U-Net, 12
-        ## Downsampling
-        #d1 = conv2d(d0, self.gf)
-        #d2 = conv2d(d1, self.gf*2)
-        #d3 = conv2d(d2, self.gf*4)
-        #d4 = conv2d(d3, self.gf*8)
-        #
-        ## Upsampling
-        #u1 = deconv2d(d4, d3, self.gf*4)
-        #u2 = deconv2d(u1, d2, self.gf*2)
-        #u3 = deconv2d(u2, d1, self.gf)
-        #
-        #u4 = UpSampling2D(size=2)(u3)
-        #output_img = Conv2D(self.channels, kernel_size=4, strides=1, padding='same', activation='tanh')(u4)
+            return g
 
-        # Downsampling
-        d1 = conv2d(d0, self.gf)
-        d2 = conv2d(d1, self.gf*2)
-        d3 = conv2d(d2, self.gf*4)
-        d4 = conv2d(d3, self.gf*8)
-        d5 = conv2d(d4, self.gf*8)
-        d6 = conv2d(d5, self.gf*8)
-        d7 = conv2d(d6, self.gf*8)
+        # weight initialization
+        init = RandomNormal(stddev=0.02)
 
-        # Upsampling
-        u1 = deconv2d(d7, d6, self.gf*8)
-        u2 = deconv2d(u1, d5, self.gf*8)
-        u3 = deconv2d(u2, d4, self.gf*8)
-        u4 = deconv2d(u3, d3, self.gf*4)
-        u5 = deconv2d(u4, d2, self.gf*2)
-        u6 = deconv2d(u5, d1, self.gf)
+        in_image = Input(shape=self.img_shape)
 
-        u7 = UpSampling2D(size=2)(u6)
-        output_img = Conv2D(self.channels, kernel_size=4, strides=1, padding='same', activation='tanh')(u7)
+        # c7s1-64
+        g = Conv2D(64, (7,7), padding='same', kernel_initializer=init)(in_image)
+        g = InstanceNormalization(axis=-1)(g)
+        g = Activation('relu')(g)
 
-        return Model(d0, output_img)
+        # d128
+        g = Conv2D(128, (3,3), strides=(2,2), padding='same', kernel_initializer=init)(g)
+        g = InstanceNormalization(axis=-1)(g)
+        g = Activation('relu')(g)
+
+        # d256
+        g = Conv2D(256, (3,3), strides=(2,2), padding='same', kernel_initializer=init)(g)
+        g = InstanceNormalization(axis=-1)(g)
+        g = Activation('relu')(g)
+
+        # R256
+        for _ in range(n_resnet):
+          g = resnet_block(256, g)
+
+        # u128
+        g = Conv2DTranspose(128, (3,3), strides=(2,2), padding='same', kernel_initializer=init)(g)
+        g = InstanceNormalization(axis=-1)(g)
+        g = Activation('relu')(g)
+
+        # u64
+        g = Conv2DTranspose(64, (3,3), strides=(2,2), padding='same', kernel_initializer=init)(g)
+        g = InstanceNormalization(axis=-1)(g)
+        g = Activation('relu')(g)
+
+        # c7s1-3
+        g = Conv2D(3, (7,7), padding='same', kernel_initializer=init)(g)
+        g = InstanceNormalization(axis=-1)(g)
+        out_image = Activation('tanh')(g)
+
+        # define model
+        model = Model(in_image, out_image)
+
+        return model
 
     def build_discriminator(self):
 
         def d_layer(layer_input, filters, f_size=4, normalization=True):
             """Discriminator layer"""
             d = Conv2D(filters, kernel_size=f_size, strides=2, padding='same')(layer_input)
-            d = LeakyReLU(alpha=0.2)(d)
             if normalization:
                 d = InstanceNormalization()(d)
+            d = LeakyReLU(alpha=0.2)(d)
             return d
 
         img = Input(shape=self.img_shape)
 
-        d1 = d_layer(img, self.df, normalization=False)
-        d2 = d_layer(d1, self.df*2)
-        d3 = d_layer(d2, self.df*4)
-        d4 = d_layer(d3, self.df*8)
+        d1 = d_layer(img, self.df, normalization=False) # C64
+        d2 = d_layer(d1, self.df*2) # C128
+        d3 = d_layer(d2, self.df*4) # C256
+        d4 = d_layer(d3, self.df*8) # C512
 
-        validity = Conv2D(1, kernel_size=4, strides=1, padding='same')(d4)
+        #d5 = Conv2D(512, (4,4), padding='same', kernel_initializer=init)(d4)
+        d5 = Conv2D(self.df*8, kernel_size=4, padding='same')(d4)
+        d5 = InstanceNormalization()(d5)
+        d5 = LeakyReLU(alpha=0.2)(d5)
+
+        # patch output
+        validity = Conv2D(1, kernel_size=4, strides=1, padding='same')(d5)
 
         return Model(img, validity)
 
@@ -356,12 +367,12 @@ class CycleGAN:
 
     # def save_models(self, file_suffix=None):
     #     self.save_model_weights(self.combined, self.combined_name, file_suffix)
-    #     self.save_model_weights(self.g_AB, self.g_AB_name, file_suffix)
-    #     self.save_model_weights(self.g_BB, self.g_BB_name, file_suffix)
-    #
-    # def save_model_weights(self, saved_models, model_name, file_suffix=None):
+    #     #self.save_model_weights(self.g_AB, self.g_AB_name, file_suffix)
+    #     #self.save_model_weights(self.g_BA, self.g_BA_name, file_suffix)
+
+    # def save_model_weights(self, model, model_name, file_suffix=None):
     #     file_path = os.path.join(self.model_save_dir, self._create_h5_file_name(model_name, file_suffix))
-    #     saved_models.save_weights(file_path)
+    #     model.save_weights(file_path)
     #
     #     print('Model weights saved.', model_name)
 
